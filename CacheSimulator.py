@@ -76,12 +76,12 @@ def simulateCaches(file_handler,  i_ch, d_ch):
             d_ch.read(addr)
 
         try:
-            miss_rate_d = '{0:.2f}'.format(float(i_ch.miss) * 100 / i_ch.access)
+            miss_rate_d = '{0:.2f}'.format(float(d_ch.miss) * 100 / d_ch.access)
         except ZeroDivisionError:
             miss_rate_d = 'N/A'
 
         try:
-            miss_rate_i = '{0:.2f}'.format(float(d_ch.miss) * 100 / d_ch.access)
+            miss_rate_i = '{0:.2f}'.format(float(i_ch.miss) * 100 / i_ch.access)
         except ZeroDivisionError:
             miss_rate_i = 'N/A'
 

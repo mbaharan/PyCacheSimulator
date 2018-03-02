@@ -43,21 +43,21 @@ class Cache:
         self.sets={}
         self.tagMask=0
         self.indexMask=0
-        self.access = 0;
-        self.miss = 0;
+        self.access = 0
+        self.miss = 0
         
     def construct(self):
         for i in range(0,  (self.index)):
             for j in range(0,  self.associativity):
                 b = Block(0,  0)
                 self.sets[i,  j]={0:b} #tag value, block
-        self.calculateTagMask();
-        self.calculateIndexMask();
+        self.calculateTagMask()
+        self.calculateIndexMask()
                 
     def calculateTagMask(self):
         for i in range(0,  self.tagBitSize):
-            self.tagMask = self.tagMask << 1;
-            self.tagMask = self.tagMask | 1;
+            self.tagMask = self.tagMask << 1
+            self.tagMask = self.tagMask | 1
         for i in range(0,  self.addressBitSize - self.tagBitSize):
             self.tagMask = self.tagMask << 1
             
@@ -75,14 +75,14 @@ class Cache:
             self.indexMask = self.indexMask << 1
             
     def replaceBlock(self,  tag,  index):
-        whichBlockIsBetter = -1; # associativity number
-        LRU_Set = -1;
-        leastLRUVal = -1;
-        b = Block(0,  1);
+        whichBlockIsBetter = -1 # associativity number
+        LRU_Set = -1
+        leastLRUVal = -1
+        b = Block(0,  1)
         for i in range(0,  self.associativity):
             if(whichBlockIsBetter == -1):
                 data = self.sets[index,  i]
-                block = data.values()[0] 
+                block = list(data.values())[0]
                 if (block.isValid == True):
                     if(leastLRUVal < 0):
                         leastLRUVal = block.access
@@ -92,24 +92,25 @@ class Cache:
                             leastLRUVal = block.access
                             LRU_Set = i
                 else:
-                    whichBlockIsBetter = i;
+                    whichBlockIsBetter = i
+                    break
         if(whichBlockIsBetter == -1):
             self.sets[index,  LRU_Set] = {tag : b}
         else:
             self.sets[index,  whichBlockIsBetter] = {tag : b}
 
-    def read(self,  address):
+    def read(self,  address, print_res = True):
         index = (self.extractIndexValue(address)>>self.offsetBitSize)
         tag = self.extractTagValue(address)
         self.access = self.access + 1
-        hit = False;
+        hit = False
         for i in range(0,  self.associativity):
             data = self.sets[index,  i]
-            block = data.get(tag);
+            block = data.get(tag)
             if(hit == False):
                 if(block):
                     if (block.isValid == True):
-                        block.read();
+                        block.read()
                         hit = True
                 else:
                     if(i == (self.associativity-1)):

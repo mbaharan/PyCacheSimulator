@@ -1,8 +1,4 @@
-#!/usr/bin/python
-import re
-from Cache import Cache
-import sys
-regex = re.compile('[0-9]+')
+#!/usr/bin/python3.5
 
 '''
 MIT License
@@ -26,12 +22,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- 
+
 	A simple cache simulator developed by Reza Baharani
 	This code is developed for Computer Architecture subject
 	University of North Carolina, Charlotte, USA
 '''
 
+import re
+from Cache import Cache
+import argparse
+import gzip
+
+parser = argparse.ArgumentParser()
+parser.add_argument("cache_trace", help="Memory address trace in gzip format")
+parser.add_argument("cache_size", help="Cache size in KB.", type=int)
+parser.add_argument("block_size", help="Block size in B.", type=int)
+parser.add_argument("set_number", help="set number", type=int)
+parser.add_argument("address_bit_size", help="set number", type=int, default=32, action='store', nargs='?')
+
+args = parser.parse_args()
+
+regex = re.compile('[0-9]+')
+
+'''
 def readFile(fileAddr):
     instructions=[]
     dataAddr=[]
@@ -48,53 +61,60 @@ def readFile(fileAddr):
             else:
                 print(data[0])
     return [instructions, dataAddr]
+'''
 
-def simulateInstructionCache(inst,  ch):
-    i=0
-    length = len(inst)
-    for addr in inst:
-        ch.read(addr)
-        i = i+1
-        sys.stdout.write(ch.name + " simulation completed: {0:.2f}%\r".format(float(i)*100/length))
-        sys.stdout.flush()                
-    printResult(ch, length)
+def simulateCaches(file_handler,  i_ch, d_ch):
 
-def simulateDataCache(addrData,  ch):
-    i=0
-    length = len(addrData)
-    for addr in addrData:
-        ch.read(addr)
-        i = i+1
-        sys.stdout.write(ch.name + " simulation completed: {0:.2f}%\r".format(float(i)*100/length))
-        sys.stdout.flush()
-    printResult(ch, length)
-        
-    
-def printResult(ch, totalAddr):
+    for line in file_handler:
+        data = line.split(' ')
+        type = int(data[0], 10)
+        addr = int(data[1], 16)
+
+        if (type == 2): # Instruction fetch
+            i_ch.read(addr) # Data read (0) or Data write (1)
+        elif (type == 0 or type == 1):
+            d_ch.read(addr)
+
+        try:
+            miss_rate_d = '{0:.2f}'.format(float(i_ch.miss) * 100 / i_ch.access)
+        except ZeroDivisionError:
+            miss_rate_d = 'N/A'
+
+        try:
+            miss_rate_i = '{0:.2f}'.format(float(d_ch.miss) * 100 / d_ch.access)
+        except ZeroDivisionError:
+            miss_rate_i = 'N/A'
+
+        print("{} miss rate : {}, access : {} and {} miss rate : {}, access : {}"
+              .format(i_ch.name, miss_rate_i, i_ch.access,
+                      d_ch.name, miss_rate_d, d_ch.access), flush=True, end='\r')
+    print()
+    printResult(i_ch)
+    printResult(d_ch)
+
+def printResult(ch):
     print        
-    print("Simulation is finished")
-    print("\tNumber of  addresses: " + str(totalAddr))
+    print("-----------------------------")
     print("\tResult for " + ch.name +":")
     print("\tTotal     : " + str(ch.access))
     print("\tMisses     : " + str(ch.miss))
     print("\tHit     : " + str(ch.access - ch.miss))
     print("\tHit Rate : {0:.5}".format(float(ch.access - ch.miss)*100/ch.access))
-    
+    print("-----------------------------")
 
-if __name__ =='__main__':
-    if(len(sys.argv) < 4):
-        print(sys.argv[0] + " fileTrace cacheSize(k) blockSize setNumber")
-        quit()
-    
-    filePath = sys.argv[1]
-    cacheSize = 16 * int(sys.argv[2]) * 1024
-    blockSize = int(sys.argv[3])
-    setNumber = int(sys.argv[4])
-    [inst, dataAdr] = readFile(filePath)
-    l1= Cache(32, 'l1_icache',  cacheSize,  blockSize,  setNumber)
-    l1_d= Cache(32, 'l1_dcache',  cacheSize,  blockSize,  setNumber)
-    l1.construct()
+
+if __name__ == '__main__':
+
+    filePath = args.cache_trace
+    cacheSize = args.cache_size * 1024
+    blockSize = args.block_size
+    setNumber = args.set_number
+    address_bit_size = args.address_bit_size
+
+    file_handler = gzip.open(filePath, 'rt')
+
+    l1_ins = Cache(address_bit_size, 'l1_icache',  cacheSize,  blockSize,  setNumber)
+    l1_d = Cache(address_bit_size, 'l1_dcache',  cacheSize,  blockSize,  setNumber)
+    l1_ins.construct()
     l1_d.construct()
-    simulateDataCache(dataAdr,  l1_d);
-    simulateInstructionCache(inst,  l1);
-
+    simulateCaches(file_handler, l1_ins, l1_d)
